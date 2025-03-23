@@ -1,6 +1,7 @@
 import datetime
 import serial
 import time
+import struct
 
 
 # Define serial port and baud rate
@@ -27,18 +28,25 @@ with open("received_data_flash.txt", "w") as file:
                     continue
                 elif (data[0] == 'e'):
                     break
+                    
+                mic_raw_data = ser.read(512)
                 
-                # Retrive data
-                timestamp = data[:19]
-                samples = data[20:].split(",")
+                if len(mic_raw_data) == 512:
 
-                # Send confirmation
-                binary_str = bytes("k\n", 'ASCII')
-                ser.write(binary_str)
+                    # Send confirmation
+                    binary_str = bytes("k\n", 'ASCII')
+                    ser.write(binary_str)
 
-                # Save data
-                for sample in samples:
-                    file.write(f"{timestamp}: {sample}\n")
+                    # Get current timestamp
+                    timestamp = data[:19]
+
+					# Write the received data with timestamp to the text file
+                    for i in range(0, len(mic_raw_data), 2):
+
+                        sample = struct.unpack("<h", mic_raw_data[i:i+2])[0]						
+                        file.write(f"{timestamp}: {sample}\n")
+                else:
+                    print(f"Incomplete data received: {len(mic_raw_data)} bytes")
 
     except KeyboardInterrupt:
         # Close the serial port and the text file when Ctrl+C is pressed
